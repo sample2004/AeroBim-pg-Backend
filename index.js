@@ -19,16 +19,19 @@ createCommentsTable()
 app.use(express.json());
 app.use(cors());
 app.use(express.json());
-app.post('/auth/login', UserController.login);
-app.post('/auth/register', UserController.register);
-app.get('/auth/me', checkAuth, UserController.Me);
-app.get('/posts', PostController.getAll);
-app.get('/posts/:id', PostController.getOne);
-app.post('/posts', checkAuth, PostController.create);
-app.get('/tags', PostController.getTags);
-app.delete('/posts', PostController.remove);
-app.patch('/posts', PostController.update);
-app.post('/posts/:id/comments', checkAuth, PostController.setComment);
+app.post('/auth/login', UserController.login); // отрабатывает
+app.post('/auth/register', UserController.register); // отрабатывает
+app.get('/auth/me', checkAuth, UserController.Me); // отрабатывает
+app.get('/posts', PostController.getAll); // отрабатывает
+app.get('/posts/:id', PostController.getOne); // отрабатывает
+app.post('/posts', checkAuth, PostController.create); // отрабатывает для всех на бэкенде не стоит защита Админ Юзер
+app.get('/tags', PostController.getTags);  // отрабатывает
+app.delete('/posts/:id', PostController.remove); // отрабатывает
+app.patch('/posts/:id', checkAuth, PostController.update); // отрабатывает
+app.post('/posts/:id/comments', checkAuth, PostController.setComment); // отрабатывает
+app.get('/posts/:id/comments',  PostController.getComments);  // отрабатывает
+//app.delete('/posts/:id/comments', PostController.removeComment);
+app.patch('/posts/:id/comments/:_id' , checkAuth, PostController.patchComment);   // отрабатывает
 
 
 

@@ -69,7 +69,6 @@ export const create = async (req, res) => {
     const { title, text, imageUrl, tags } = req.body;
     const userId = req.userId;
     console.log(userId);
-    // Пример запроса: INSERT INTO posts (title, text, image_url, tags, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *;
     const post = await pool.query('INSERT INTO posts (title, text, imageurl, tags, userid, timestamp, viewscount) VALUES ($1, $2, $3, $4, $5, now(), 0) RETURNING *', [title, text, imageUrl, tags, userId]);
     res.json(post[0]);
   } catch(err) {
@@ -83,9 +82,10 @@ export const create = async (req, res) => {
 export const update = async (req, res) => {
   try {
     const postId = req.params.id;
-    const { title, text, imageUrl, tags, userId } = req.body;
+    const userId = req.userId;
+    const { title, text, imageurl, tags } = req.body;
     // Пример запроса: UPDATE posts SET title = $1, text = $2, image_url = $3, tags = $4, user_id = $5 WHERE id = $6;
-    await pool.query('UPDATE posts SET title = $1, text = $2, image_url = $3, tags = $4, user_id = $5 WHERE id = $6', [title, text, imageUrl, tags, userId, postId]);
+    await pool.query('UPDATE posts SET title = $1, text = $2, imageurl = $3, tags = $4, userid = $5 WHERE id = $6', [title, text, imageurl, tags, userId, postId]);
     
     res.json({ success: true });
   } catch(err) {
@@ -103,8 +103,46 @@ export const setComment = async (req, res) => {
     const query = 'INSERT INTO comments (postid, userid, content) VALUES ($1, $2, $3) RETURNING *';
     const values = [id, userId, content];
     const result = await pool.query(query, values);
-    const comment = result.rows[0];
     
+    res.status(201).json(comment);
+  } catch (error) {
+    console.error('Error creating comment:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getComments = async (req, res) => {
+  const{ id } = req.params;
+  const userId = req.userId;
+  const { content } = req.body;
+  try {
+  console.log(req.body);
+    const result = await pool.query('SELECT comments.id, comments.content,  users.surname, comments.timestamp, users.name FROM comments JOIN users ON comments.userid = users.id WHERE postid = $1', [id]);
+    const comment = result.rows;
+    console.log(comment);
+    res.status(201).json(comment);
+  } catch (error) {
+    console.error('Error creating comment:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+export const patchComment = async (req, res) => {
+  const commentId = req.params._id;
+  const postId = req.params.id;
+  const userId = req.userId;
+  const { content } = req.body;
+  //console.log(req.params);
+  //console.log(req.userId);
+  //console.log(req.body);
+
+  try {
+    const result = await pool.query('UPDATE comments SET content = $1 WHERE userid = $2 AND id = $3 AND postid = $4 RETURNING *', [content, userId, commentId, postId]);
+    const comment = result.rowCount;
+    if (comment !== 0) {
+        res.status(200).json({ success: true });
+    } else {
+        res.status(200).json({ success: false });
+    }
     res.status(201).json(comment);
   } catch (error) {
     console.error('Error creating comment:', error);
