@@ -14,3 +14,4 @@ export default (req, res, next) => {
         return res.status(401).send('Access denied. No token provided.');
     }
 }
+

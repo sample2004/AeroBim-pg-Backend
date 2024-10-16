@@ -1,4 +1,5 @@
 
+import log from 'node-gyp/lib/log.js';
 import { pool } from '../config/db.js';
 export async function createUsersTable() {
     try {
@@ -67,3 +68,14 @@ export async function createCommentsTable() {
         console.error('comments table creation failed');
     }
 };
+export async function initTables() {
+    try {
+        await createUsersTable();
+        await createPostsTable();
+        await createCommentsTable();
+        console.log('All tables created successfully');
+    } catch (err) {
+        console.error(err);
+        console.error('Table creation process failed');
+    }
+}

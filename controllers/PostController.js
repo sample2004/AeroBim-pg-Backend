@@ -2,6 +2,8 @@
 import { json } from 'express';
 import { body } from 'express-validator';
 import { pool } from '../config/db.js'; // Замените на путь к файлу, где вы настроили Pool и функцию query
+import log from 'node-gyp/lib/log.js';
+import jwt from 'jsonwebtoken';
 
 export const getAll = async (req, res) => {
   try {
@@ -32,20 +34,24 @@ export const getTags = async (req, res) => {
 };
 
 export const getOne = async (req, res) => {
-  //try {
-    const {id} = req.params;
-    console.log(req.params);
-    // Пример запроса: UPDATE posts SET views_count = views_count + 1 WHERE id = $1 RETURNING *;
-    const post = await pool.query('UPDATE posts SET viewscount = viewscount + 1  RETURNING *', []);
+  try {
+    const postId = req.params.id;
+    var userId =  null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7); // Убираем префикс 'Bearer '
+      const decoded = jwt.verify(token, 'SECRET');
+      userId = decoded._id;
+    }
+    await pool.query('UPDATE posts SET viewed_users = array_append(viewed_users, $1) WHERE id = $2 AND array_position(viewed_users, $1) IS NULL', [userId,postId]);
+    const count = await pool.query('SELECT id, array_length(viewed_users, 1) AS viewed_count FROM posts WHERE id = $1', [postId]);
+    await pool.query('UPDATE posts SET viewscount = $1 WHERE id = $2', [count.rows[0].viewed_count, postId]);
+    const post = await pool.query('SELECT posts.*, users.name, users.surname, users.patronymic, users.avatarurl FROM posts JOIN users ON posts.userid = users.id WHERE posts.id = $1', [postId]);
+    //const post = await pool.query('SELECT * FROM posts WHERE id = $1', [postId]);
     res.json(post.rows);
-  //   if (!post.length) {
-  //     return res.status(404).json({ message: 'Post not found' });
-  //   }
-  //   res.json(post[0]);
-  // } catch (error) {
-  //   res.status(501).json({ message: 'Error fetching post', error: error.message });
-  //   console.error(error);
-  // }
+  } catch (err) {
+    console.log(err);
+  }
   
 };
 
@@ -99,12 +105,15 @@ export const setComment = async (req, res) => {
   const{ id } = req.params;
   const userId = req.userId;
   const { content } = req.body;
+  console.log(id);
+  console.log(userId);
+  console.log(content);
   try {
     const query = 'INSERT INTO comments (postid, userid, content) VALUES ($1, $2, $3) RETURNING *';
     const values = [id, userId, content];
     const result = await pool.query(query, values);
     
-    res.status(201).json(comment);
+    res.status(201).json(result);
   } catch (error) {
     console.error('Error creating comment:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -116,7 +125,7 @@ export const getComments = async (req, res) => {
   const userId = req.userId;
   const { content } = req.body;
   try {
-  console.log(req.body);
+    console.log(req.body);
     const result = await pool.query('SELECT comments.id, comments.content,  users.surname, comments.timestamp, users.name FROM comments JOIN users ON comments.userid = users.id WHERE postid = $1', [id]);
     const comment = result.rows;
     console.log(comment);
@@ -134,14 +143,14 @@ export const patchComment = async (req, res) => {
   //console.log(req.params);
   //console.log(req.userId);
   //console.log(req.body);
-
+  
   try {
     const result = await pool.query('UPDATE comments SET content = $1 WHERE userid = $2 AND id = $3 AND postid = $4 RETURNING *', [content, userId, commentId, postId]);
     const comment = result.rowCount;
     if (comment !== 0) {
-        res.status(200).json({ success: true });
+      res.status(200).json({ success: true });
     } else {
-        res.status(200).json({ success: false });
+      res.status(200).json({ success: false });
     }
     res.status(201).json(comment);
   } catch (error) {

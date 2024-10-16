@@ -6,16 +6,14 @@ import checkAuth from './utils/checkAuth.js';
 import * as UserController from './controllers/UserController.js'; 
 import * as PostController from './controllers/PostController.js';
 import cors from 'cors';
-import { createPostsTable, createUsersTable, createCommentsTable } from './models/CreatePG.js';
+import { createPostsTable, createUsersTable, createCommentsTable, initTables } from './models/CreatePG.js';
 import { pool } from './config/db.js';
 import { body } from 'express-validator';
 import log from 'node-gyp/lib/log.js';
 
 
 const app = express();
-createUsersTable();
-createPostsTable();
-createCommentsTable()
+initTables();
 app.use(express.json());
 app.use(cors());
 app.use(express.json());
@@ -23,7 +21,7 @@ app.post('/auth/login', UserController.login); // отрабатывает
 app.post('/auth/register', UserController.register); // отрабатывает
 app.get('/auth/me', checkAuth, UserController.Me); // отрабатывает
 app.get('/posts', PostController.getAll); // отрабатывает
-app.get('/posts/:id', PostController.getOne); // отрабатывает
+app.get('/posts/:id',  PostController.getOne); // отрабатывает
 app.post('/posts', checkAuth, PostController.create); // отрабатывает для всех на бэкенде не стоит защита Админ Юзер
 app.get('/tags', PostController.getTags);  // отрабатывает
 app.delete('/posts/:id', PostController.remove); // отрабатывает
