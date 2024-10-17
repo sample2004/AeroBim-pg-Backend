@@ -35,6 +35,7 @@ export async function createPostsTable() {
             text VARCHAR(255),
             tags VARCHAR(255),
             viewscount INT,
+            viewed_users VARCHAR[],
             imageurl VARCHAR(255),
             userid UUID,
             timestamp TIMESTAMP DEFAULT now(),

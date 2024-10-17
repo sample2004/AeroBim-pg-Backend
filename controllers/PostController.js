@@ -8,7 +8,7 @@ import jwt from 'jsonwebtoken';
 export const getAll = async (req, res) => {
   try {
     // Пример запроса: SELECT * FROM posts JOIN users ON posts.user_id = users.id;
-    const result = await pool.query('SELECT posts.*, users.name, users.surname, users.email, users.avatarurl FROM posts JOIN users ON posts.userid = users.id', []);
+    const result = await pool.query('SELECT posts.*, users.name, users.surname, users.patronymic, users.email, users.avatarurl FROM posts JOIN users ON posts.userid = users.id', []);
     //const posts = result.rows[]
     res.json(result.rows);
   } catch (err) {
@@ -37,11 +37,16 @@ export const getOne = async (req, res) => {
   try {
     const postId = req.params.id;
     var userId =  null;
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7); // Убираем префикс 'Bearer '
-      const decoded = jwt.verify(token, 'SECRET');
-      userId = decoded._id;
+    console.log(req.headers.authorization);
+    const authHeader = (req.headers.authorization || '').split(' ')[1];
+    if (authHeader) {
+      try {
+        const token = authHeader;
+        const decoded = jwt.verify(token, 'SECRET');
+        userId = decoded._id      
+      } catch (e) {
+        return res.status(401).send('Access denied. No token provided.');
+      }
     }
     await pool.query('UPDATE posts SET viewed_users = array_append(viewed_users, $1) WHERE id = $2 AND array_position(viewed_users, $1) IS NULL', [userId,postId]);
     const count = await pool.query('SELECT id, array_length(viewed_users, 1) AS viewed_count FROM posts WHERE id = $1', [postId]);
