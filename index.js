@@ -5,8 +5,9 @@ import { registerValidation, loginValidation, postCreateValidation } from './val
 import checkAuth from './utils/checkAuth.js';
 import * as UserController from './controllers/UserController.js'; 
 import * as PostController from './controllers/PostController.js';
+import * as HelpDeskController from './controllers/HelpDeskController.js';
 import cors from 'cors';
-import { createPostsTable, createUsersTable, createCommentsTable, initTables } from './models/CreatePG.js';
+import { initTables } from './models/CreatePG.js';
 import { pool } from './config/db.js';
 import { body } from 'express-validator';
 import log from 'node-gyp/lib/log.js';
@@ -30,7 +31,9 @@ app.post('/posts/:id/comments', checkAuth, PostController.setComment); // отр
 app.get('/posts/:id/comments',  PostController.getComments);  // отрабатывает
 //app.delete('/posts/:id/comments', PostController.removeComment);
 app.patch('/posts/:id/comments/:_id' , checkAuth, PostController.patchComment);   // отрабатывает
-
+app.post('/helpdesk/family', checkAuth, HelpDeskController.newTaskFamily);
+app.get('/helpdesk/tasks', checkAuth, HelpDeskController.getAllTasks);
+app.patch('/helpdesk/family/:id/cancel', checkAuth, HelpDeskController.cancelTaskFamily);
 
 
 app.listen(3001, (err) => {

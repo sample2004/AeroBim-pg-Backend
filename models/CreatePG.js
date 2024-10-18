@@ -69,14 +69,42 @@ export async function createCommentsTable() {
         console.error('comments table creation failed');
     }
 };
+export async function createFamityTaskTable() {
+    try {
+        const query = `
+            CREATE TABLE IF NOT EXISTS family_task (
+            id SERIAL PRIMARY KEY,
+            program varchar(255) NOT NULL,
+            title varchar(255) NOT NULL,
+            content varchar(255) NOT NULL,
+            file_url varchar(255),
+            status varchar(255) NOT NULL,
+            comments varchar[],
+            get_userid UUID REFERENCES users(id),
+            set_userid UUID REFERENCES users(id) NOT NULL,
+            userid_worker UUID[],
+            created_at TIMESTAMP DEFAULT now(),
+            patched_at TIMESTAMP[]
+            );
+            `;
+        
+        await pool.query(query);
+        console.log('fammily_task table created');
+    } catch (err) {
+        console.error(err);
+        console.error('fammily_task table creation failed');
+    }
+};
 export async function initTables() {
     try {
         await createUsersTable();
         await createPostsTable();
         await createCommentsTable();
+        await createFamityTaskTable();
         console.log('All tables created successfully');
     } catch (err) {
         console.error(err);
         console.error('Table creation process failed');
     }
 }
+
