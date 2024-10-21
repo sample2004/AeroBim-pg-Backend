@@ -78,7 +78,7 @@ app.patch('/posts/:id/comments/:_id' , checkAuth, PostController.patchComment); 
 app.post('/helpdesk/family', checkAuth, HelpDeskController.newTaskFamily);
 app.get('/helpdesk/tasks', checkAuth, HelpDeskController.getAllTasks);
 
-app.patch('/helpdesk/family/:id/cancel', checkAuth, HelpDeskController.cancelTaskFamily);
+// app.patch('/helpdesk/family/:id/cancel', checkAuth, HelpDeskController.cancelTaskFamily);
 app.post('/upload/tasks/:id', checkAuth, uploadTasks.single('zip'), (req, res) => {
   console.log(app);
   res.json({

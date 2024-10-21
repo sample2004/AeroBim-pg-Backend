@@ -6,10 +6,10 @@ import jwt from 'jsonwebtoken';
 
 export const newTaskFamily = async (req, res) => {
     try {
-        const { program, title, content, file_url} = req.body;
+        const { program, title, content, file_url, type} = req.body;
         const userId = req.userId;
         console.log(userId);
-        const post = await pool.query('INSERT INTO family_task (program, title, content, file_url, set_userid) VALUES ($1, $2, $3, $4, $5) RETURNING *', [program, title, content, file_url, userId]);
+        const post = await pool.query('INSERT INTO family_task (program, title, content, file_url, set_userid,type) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [program, title, content, file_url, userId, type]);
         res.json(post[0]);
     } catch(err) {
         console.log(err);
