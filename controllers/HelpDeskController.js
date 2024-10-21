@@ -9,7 +9,7 @@ export const newTaskFamily = async (req, res) => {
         const { program, title, content, file_url} = req.body;
         const userId = req.userId;
         console.log(userId);
-        const post = await pool.query('INSERT INTO family_task (program, title, content, file_url, status, set_userid) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [program, title, content, file_url, "new", userId]);
+        const post = await pool.query('INSERT INTO family_task (program, title, content, file_url, set_userid) VALUES ($1, $2, $3, $4, $5) RETURNING *', [program, title, content, file_url, userId]);
         res.json(post[0]);
     } catch(err) {
         console.log(err);
@@ -30,20 +30,25 @@ export const getAllTasks = async (req, res) => {
     }
 };
 
-export const cancelTaskFamily = async (req, res) => {
+export const stateTaskFamily = async (req, res) => {
     try {
-        console.log(req.params.id);
+        
         const taskId = req.params.id;
         const userId = req.userId;
-        const { comments } = req.body;
-        // Пример запроса: UPDATE posts SET title = $1, text = $2, image_url = $3, tags = $4, user_id = $5 WHERE id = $6;
-        const result =  await pool.query('UPDATE family_task SET status = $1, userid_worker = array_append(userid_worker, $2), comments = array_append(comments, $3), patched_at = array_append(patched_at, now()) WHERE id = $4', ['canceled', userId, comments, taskId]);
+        const { comments, status } = req.body;
+        var result = null;
+        if ((status === "canceled" || status === "inprogress") && comments || status === "completed") {
+            result =  await pool.query('UPDATE family_task SET status = array_append(status, $1), userid_worker = array_append(userid_worker, $2), comments = array_append(comments, $3), patched_at = array_append(patched_at, now()) WHERE id = $4 AND set_userid = $2', [status, userId, comments, taskId]);
+        } else {
+            return res.status(401).send('Комментарий не оставлен');
+        }
         console.log(result);
-        res.json({ success: true });
+        if (result.rowCount === 0) {res.status(401).send('Комментарий не оставлен');} else {  res.json({ success: true });}
+      
     } catch(err) {
         console.log(err);
         res.status(500).json({
-            message: 'Не удалось отменить заявку'
+            message: 'Проблема смены статуса'
         });
     }
 };

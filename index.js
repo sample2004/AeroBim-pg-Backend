@@ -12,7 +12,6 @@ import { pool } from './config/db.js';
 import { body } from 'express-validator';
 import log from 'node-gyp/lib/log.js';
 import * as fs from 'fs';
-import { url } from 'inspector';
 
 
 const app = express();
@@ -78,6 +77,7 @@ app.get('/posts/:id/comments',  PostController.getComments);  // отрабат�
 app.patch('/posts/:id/comments/:_id' , checkAuth, PostController.patchComment);   // отрабатывает
 app.post('/helpdesk/family', checkAuth, HelpDeskController.newTaskFamily);
 app.get('/helpdesk/tasks', checkAuth, HelpDeskController.getAllTasks);
+
 app.patch('/helpdesk/family/:id/cancel', checkAuth, HelpDeskController.cancelTaskFamily);
 app.post('/upload/tasks/:id', checkAuth, uploadTasks.single('zip'), (req, res) => {
   console.log(app);
@@ -91,6 +91,9 @@ app.post('/upload/posts', checkAuth, uploadPosts.single('image'), (req, res) => 
     
   });
 });
+
+
+
 
 
 
