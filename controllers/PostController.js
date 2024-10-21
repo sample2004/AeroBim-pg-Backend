@@ -37,8 +37,10 @@ export const getOne = async (req, res) => {
   try {
     const postId = req.params.id;
     var userId =  null;
-    console.log(req.headers.authorization);
+    console.log(`req.params${req.params}`);
+    
     const authHeader = (req.headers.authorization || '').split(' ')[1];
+    
     if (authHeader) {
       try {
         const token = authHeader;
@@ -48,6 +50,8 @@ export const getOne = async (req, res) => {
         return res.status(401).send('Access denied. No token provided.');
       }
     }
+    console.log(postId);
+    console.log(userId);
     await pool.query('UPDATE posts SET viewed_users = array_append(viewed_users, $1) WHERE id = $2 AND array_position(viewed_users, $1) IS NULL', [userId,postId]);
     const count = await pool.query('SELECT id, array_length(viewed_users, 1) AS viewed_count FROM posts WHERE id = $1', [postId]);
     await pool.query('UPDATE posts SET viewscount = $1 WHERE id = $2', [count.rows[0].viewed_count, postId]);
@@ -81,7 +85,7 @@ export const create = async (req, res) => {
     const userId = req.userId;
     console.log(userId);
     const post = await pool.query('INSERT INTO posts (title, text, imageurl, tags, userid, timestamp, viewscount) VALUES ($1, $2, $3, $4, $5, now(), 0) RETURNING *', [title, text, imageUrl, tags, userId]);
-    res.json(post[0]);
+    res.json(post.rows);
   } catch(err) {
     console.log(err);
     res.status(500).json({
