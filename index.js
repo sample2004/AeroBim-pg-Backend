@@ -13,7 +13,7 @@ import { pool } from './config/db.js';
 import { body } from 'express-validator';
 import * as fs from 'fs';
 import {  WebSocketServer } from 'ws';
-import { send } from 'process';
+
 
 
 
@@ -104,20 +104,34 @@ app.post('/upload/posts', checkAuth, uploadPosts.single('image'), (req, res) => 
 //     console.log('Подписка на уведомления успешна');
 //   }
 // });
-const eventName = "db_event";
+
 const subscriber = createSubscriber({ 
   connectionString: `postgres://postgres:GOS-30081987@localhost:5432/postgres`,
 })
-await subscriber.connect();
-await subscriber.listenTo(eventName);
 const wss = new WebSocketServer({ port: 8080 });
-subscriber.notifications.on(eventName, async (data) => {
-  console.log(data.record.status);
-  wss.on('connection', (ws) => {
-    ws.send(data.record.status + now());
+
+// При подключении клиента
+wss.on('connection', (ws) => {
+  console.log('Клиент подключен.');
+
+  // При получении события из PostgreSQL
+  subscriber.notifications.on("db_event", (payload) => {
+    console.log("Отправляем уведомление клиенту:", payload);
+    ws.send(JSON.stringify(payload)); // Отправляем данные клиенту через WebSocket
   });
-  
+
+  // Закрытие соединения с клиентом
+  ws.on('close', () => {
+    console.log('Клиент отключен.');
+  });
 });
+
+// Запускаем подписку на уведомления PostgreSQL
+(async () => {
+  await subscriber.connect();
+  await subscriber.listenTo("db_event");
+  console.log("Прослушивание события 'db_event' запущено.");
+})();
 
 
 
