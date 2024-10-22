@@ -1,6 +1,7 @@
-import express from 'express';
+import express, { query } from 'express';
+import createSubscriber from 'pg-listen';
 import multer, { diskStorage } from 'multer';
-import mongoose, { get, now } from 'mongoose';
+import mongoose, { connect, get, now } from 'mongoose';
 import { registerValidation, loginValidation, postCreateValidation } from './validations.js'
 import checkAuth from './utils/checkAuth.js';
 import * as UserController from './controllers/UserController.js'; 
@@ -10,24 +11,25 @@ import cors from 'cors';
 import { initTables } from './models/CreatePG.js';
 import { pool } from './config/db.js';
 import { body } from 'express-validator';
-import log from 'node-gyp/lib/log.js';
 import * as fs from 'fs';
+import {  WebSocketServer } from 'ws';
+import { send } from 'process';
+
 
 
 const app = express();
-
 const storageTasks = multer.diskStorage({
   destination: (req, file, cb) => {
     const taskId = req.params.id;
     const dir = `upload/tasks/${taskId}`;
-    console.log(dir)
+    
     fs.mkdir(dir, { recursive: true }, (error) => {
       if (error) {
         return cb(error);
         console.log(error)
       }
       return cb(null, dir);
-      console.log(dir)
+      
     });
   },
   filename: (req, file, cb) => {
@@ -75,10 +77,10 @@ app.post('/posts/:id/comments', checkAuth, PostController.setComment); // отр
 app.get('/posts/:id/comments',  PostController.getComments);  // отрабатывает
 //app.delete('/posts/:id/comments', PostController.removeComment);
 app.patch('/posts/:id/comments/:_id' , checkAuth, PostController.patchComment);   // отрабатывает
-app.post('/helpdesk/family', checkAuth, HelpDeskController.newTaskFamily);
+app.post('/helpdesk/tasks', checkAuth, HelpDeskController.newTask);
 app.get('/helpdesk/tasks', checkAuth, HelpDeskController.getAllTasks);
 
-// app.patch('/helpdesk/family/:id/cancel', checkAuth, HelpDeskController.cancelTaskFamily);
+app.patch('/helpdesk/state/:id', checkAuth, HelpDeskController.stateTask);
 app.post('/upload/tasks/:id', checkAuth, uploadTasks.single('zip'), (req, res) => {
   console.log(app);
   res.json({
@@ -95,15 +97,33 @@ app.post('/upload/posts', checkAuth, uploadPosts.single('image'), (req, res) => 
 
 
 
+// pool.query('LISTEN db_event;', (err, res) => {
+  //   if (err) {
+//     console.error(err);
+//   } else {
+//     console.log('Подписка на уведомления успешна');
+//   }
+// });
+const eventName = "db_event";
+const subscriber = createSubscriber({ 
+  connectionString: `postgres://postgres:GOS-30081987@localhost:5432/postgres`,
+})
+await subscriber.connect();
+await subscriber.listenTo(eventName);
+const wss = new WebSocketServer({ port: 8080 });
+subscriber.notifications.on(eventName, async (data) => {
+  console.log(data.record.status);
+  wss.on('connection', (ws) => {
+    ws.send(data.record.status + now());
+  });
+  
+});
+
 
 
 app.listen(3001, (err) => {
-  if(err){
+  if (err) {
     return console.log(err);
   }
-  
-
   console.log(`Server listening on 3001`);
-  });
-  
-  
+});

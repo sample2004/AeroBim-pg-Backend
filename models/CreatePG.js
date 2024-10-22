@@ -72,7 +72,7 @@ export async function createCommentsTable() {
 export async function createFamityTaskTable() {
     try {
         const query = `
-            CREATE TABLE IF NOT EXISTS family_task (
+            CREATE TABLE IF NOT EXISTS tasks (
             id SERIAL PRIMARY KEY,
             program varchar(255) NOT NULL,
             category varchar(255) DEFAULT '-',
@@ -92,10 +92,10 @@ export async function createFamityTaskTable() {
             `;
         
         await pool.query(query);
-        console.log('fammily_task table created');
+        console.log('tasks table created');
     } catch (err) {
         console.error(err);
-        console.error('fammily_task table creation failed');
+        console.error('tasks table creation failed');
     }
 };
 export async function initTables() {
