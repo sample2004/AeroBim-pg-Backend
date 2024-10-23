@@ -2,7 +2,7 @@
 import { json } from 'express';
 import { body } from 'express-validator';
 import { pool } from '../config/db.js'; // Замените на путь к файлу, где вы настроили Pool и функцию query
-import log from 'node-gyp/lib/log.js';
+
 import jwt from 'jsonwebtoken';
 
 export const getAll = async (req, res) => {
@@ -37,7 +37,7 @@ export const getOne = async (req, res) => {
   try {
     const postId = req.params.id;
     var userId =  null;
-
+    
     
     const authHeader = (req.headers.authorization || '').split(' ')[1];
     
@@ -50,7 +50,7 @@ export const getOne = async (req, res) => {
         return res.status(401).send('Access denied. No token provided.');
       }
     }
-
+    
     await pool.query('UPDATE posts SET viewed_users = array_append(viewed_users, $1) WHERE id = $2 AND array_position(viewed_users, $1) IS NULL', [userId,postId]);
     const count = await pool.query('SELECT id, array_length(viewed_users, 1) AS viewed_count FROM posts WHERE id = $1', [postId]);
     await pool.query('UPDATE posts SET viewscount = $1 WHERE id = $2', [count.rows[0].viewed_count, postId]);
@@ -80,10 +80,11 @@ export const remove = async (req, res) => {
 
 export const create = async (req, res) => {
   try {
-    const { title, text, imageUrl, tags } = req.body;
+    const { title, text, imageurl, tags } = req.body;
     const userId = req.userId;
     console.log(userId);
-    const post = await pool.query('INSERT INTO posts (title, text, imageurl, tags, userid, timestamp, viewscount) VALUES ($1, $2, $3, $4, $5, now(), 0) RETURNING *', [title, text, imageUrl, tags, userId]);
+    const post = await pool.query('INSERT INTO posts (title, text, imageurl, tags, userid, timestamp, viewscount) VALUES ($1, $2, $3, $4, $5, now(), 0) RETURNING *', [title, text, imageurl, tags, userId]);
+    
     res.json(post.rows);
   } catch(err) {
     console.log(err);
@@ -134,35 +135,34 @@ export const getComments = async (req, res) => {
   const { content } = req.body;
   try {
     console.log(req.body);
-    const result = await pool.query('SELECT comments.id, comments.content,  users.surname, comments.timestamp, users.name FROM comments JOIN users ON comments.userid = users.id WHERE postid = $1', [id]);
-    const comment = result.rows;
-    console.log(comment);
-    res.status(201).json(comment);
+    const result = await pool.query('SELECT comments.id, comments.content,  users.surname, comments.timestamp, users.name, users.avatarurl FROM comments JOIN users ON comments.userid = users.id WHERE postid = $1', [id]);
+    res.status(200).json(result.rows);
+    console.log(result.rows);
   } catch (error) {
     console.error('Error creating comment:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-export const patchComment = async (req, res) => {
-  const commentId = req.params._id;
-  const postId = req.params.id;
-  const userId = req.userId;
-  const { content } = req.body;
-  //console.log(req.params);
-  //console.log(req.userId);
-  //console.log(req.body);
-  
-  try {
-    const result = await pool.query('UPDATE comments SET content = $1 WHERE userid = $2 AND id = $3 AND postid = $4 RETURNING *', [content, userId, commentId, postId]);
-    const comment = result.rowCount;
-    if (comment !== 0) {
-      res.status(200).json({ success: true });
-    } else {
-      res.status(200).json({ success: false });
-    }
-    res.status(201).json(comment);
-  } catch (error) {
-    console.error('Error creating comment:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
+// export const patchComment = async (req, res) => {
+  //   const commentId = req.params._id;
+//   const postId = req.params.id;
+//   const userId = req.userId;
+//   const { content } = req.body;
+//console.log(req.params);
+//console.log(req.userId);
+//console.log(req.body);
+
+//   try {
+//     const result = await pool.query('UPDATE comments SET content = $1 WHERE userid = $2 AND id = $3 AND postid = $4 RETURNING *', [content, userId, commentId, postId]);
+//     const comment = result.rowCount;
+//     if (comment !== 0) {
+//       res.status(200).json({ success: true });
+//     } else {
+//       res.status(200).json({ success: false });
+//     }
+//     res.status(201).json(comment);
+//   } catch (error) {
+//     console.error('Error creating comment:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// };

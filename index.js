@@ -21,7 +21,7 @@ const app = express();
 const storageTasks = multer.diskStorage({
   destination: (req, file, cb) => {
     const taskId = req.params.id;
-    const dir = `upload/tasks/${taskId}`;
+    const dir = `upload/tasks/`;
     
     fs.mkdir(dir, { recursive: true }, (error) => {
       if (error) {
@@ -33,7 +33,7 @@ const storageTasks = multer.diskStorage({
     });
   },
   filename: (req, file, cb) => {
-    cb(null, file.originalname);
+    cb(null, Date.now()+"_"+file.originalname); // добавляем время в имя файла
   }
 });
 
@@ -52,7 +52,7 @@ const storagePosts = multer.diskStorage({
     });
   },
   filename: (req, file, cb) => {
-    cb(null, file.originalname);
+    cb(null, Date.now()+"_"+file.originalname);
   }
 });
 const uploadPosts = multer({ storage: storagePosts });
@@ -76,15 +76,15 @@ app.patch('/posts/:id', checkAuth, PostController.update); // отрабатыв
 app.post('/posts/:id/comments', checkAuth, PostController.setComment); // отрабатывает
 app.get('/posts/:id/comments',  PostController.getComments);  // отрабатывает
 //app.delete('/posts/:id/comments', PostController.removeComment);
-app.patch('/posts/:id/comments/:_id' , checkAuth, PostController.patchComment);   // отрабатывает
+//app.patch('/posts/:id/comments/:_id' , checkAuth, PostController.patchComment);   // отрабатывает
 app.post('/helpdesk/tasks', checkAuth, HelpDeskController.newTask);
 app.get('/helpdesk/tasks', checkAuth, HelpDeskController.getAllTasks);
 
 app.patch('/helpdesk/state/:id', checkAuth, HelpDeskController.stateTask);
-app.post('/upload/tasks/:id', checkAuth, uploadTasks.single('zip'), (req, res) => {
+app.post('/upload/tasks', checkAuth, uploadTasks.single('zip'), (req, res) => {
   console.log(app);
   res.json({
-    url: `/upload/tasks/${req.params.id}/${req.file.originalname}`,
+    url: `/upload/tasks/${req.file.filename}`,
   });
 });
 app.post('/upload/posts', checkAuth, uploadPosts.single('image'), (req, res) => {
@@ -113,13 +113,13 @@ const wss = new WebSocketServer({ port: 8080 });
 // При подключении клиента
 wss.on('connection', (ws) => {
   console.log('Клиент подключен.');
-
+  
   // При получении события из PostgreSQL
   subscriber.notifications.on("db_event", (payload) => {
     console.log("Отправляем уведомление клиенту:", payload);
     ws.send(JSON.stringify(payload)); // Отправляем данные клиенту через WebSocket
   });
-
+  
   // Закрытие соединения с клиентом
   ws.on('close', () => {
     console.log('Клиент отключен.');

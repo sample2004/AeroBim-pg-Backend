@@ -8,9 +8,10 @@ export const newTask = async (req, res) => {
     try {
         const { program, title, content, file_url, type, category} = req.body;
         const userId = req.userId;
-
+        
         const post = await pool.query('INSERT INTO tasks (program, title, content, file_url, set_userid, type, category) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [program, title, content, file_url, userId, type, category]);
-        res.json(post[0]);
+        res.json(post.rows);
+        console.log(post.rows);
     } catch(err) {
         console.log(err);
         res.status(500).json({
