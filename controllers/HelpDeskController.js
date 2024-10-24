@@ -1,8 +1,9 @@
 // Импорт функции query, которую мы создали выше
-import { json } from 'express';
+import { json, query } from 'express';
 import { body } from 'express-validator';
 import { pool } from '../config/db.js'; // Замените на путь к файлу, где вы настроили Pool и функцию query
 import jwt from 'jsonwebtoken';
+import log from 'node-gyp/lib/log.js';
 
 export const newTask = async (req, res) => {
     try {
@@ -52,6 +53,39 @@ export const stateTask = async (req, res) => {
         console.log(err);
         res.status(500).json({
             message: 'Проблема смены статуса'
+        });
+    }
+};
+export const getCountTaskUser = async (req, res) => {
+    console.log(`Ответ`);
+    try {
+        const userId = req.userId;
+        console.log(userId);
+        const resultTasks = await pool.query(`
+            SELECT 
+                SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new,
+                SUM(CASE WHEN status = 'inprogress' THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN status = 'canceled' THEN 1 ELSE 0 END) as canceled,
+                SUM(CASE WHEN status = 'review' THEN 1 ELSE 0 END) as review,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
+            FROM tasks 
+            WHERE set_userid = $1
+        `, [userId]);
+            
+        const result = {
+            new: parseInt(resultTasks.rows[0].new) || 0,
+            in_progress: parseInt(resultTasks.rows[0].in_progress) || 0,
+            canceled: parseInt(resultTasks.rows[0].canceled) || 0,
+            review: parseInt(resultTasks.rows[0].review) || 0,
+            completed: parseInt(resultTasks.rows[0].completed) || 0
+        };
+
+        res.json(result);
+        console.log(`Ответ: ${JSON.stringify(result)}`);
+    } catch(err) {
+        console.log(err);
+        res.status(500).json({
+            message: 'Проблема при получении количества задач'
         });
     }
 };

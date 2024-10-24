@@ -79,7 +79,7 @@ app.get('/posts/:id/comments',  PostController.getComments);  // отрабат�
 //app.patch('/posts/:id/comments/:_id' , checkAuth, PostController.patchComment);   // отрабатывает
 app.post('/helpdesk/tasks', checkAuth, HelpDeskController.newTask);
 app.get('/helpdesk/tasks', checkAuth, HelpDeskController.getAllTasks);
-
+app.get('/helpdesk/:id/tasks', checkAuth, HelpDeskController.getCountTaskUser);
 app.patch('/helpdesk/state/:id', checkAuth, HelpDeskController.stateTask);
 app.post('/upload/tasks', checkAuth, uploadTasks.single('zip'), (req, res) => {
   console.log(app);

@@ -1,16 +1,25 @@
 // Импорт функции query, которую мы создали выше
-import { json } from 'express';
+import { json, query } from 'express';
 import { body } from 'express-validator';
 import { pool } from '../config/db.js'; // Замените на путь к файлу, где вы настроили Pool и функцию query
 
 import jwt from 'jsonwebtoken';
+import log from 'node-gyp/lib/log.js';
+
 
 export const getAll = async (req, res) => {
   try {
-    // Пример запроса: SELECT * FROM posts JOIN users ON posts.user_id = users.id;
+    const { sort } = req.query;
+    let posts;
     const result = await pool.query('SELECT posts.*, users.name, users.surname, users.patronymic, users.email, users.avatarurl FROM posts JOIN users ON posts.userid = users.id', []);
-    //const posts = result.rows[]
-    res.json(result.rows);
+    const temp = result.rows;
+    if (sort === 'new') {
+      temp.sort((a, b) => b.timestamp - a.timestamp);
+    } else if (sort === 'popular') {
+      temp.sort((a, b) => (b.viewscount + b.commentscount) - (a.viewscount + a.commentscount));
+    }
+    res.json(temp);
+
   } catch (err) {
     console.log(err);
     res.status(500).json({
@@ -82,7 +91,7 @@ export const create = async (req, res) => {
   try {
     const { title, text, imageurl, tags } = req.body;
     const userId = req.userId;
-    console.log(userId);
+
     const post = await pool.query('INSERT INTO posts (title, text, imageurl, tags, userid, timestamp, viewscount) VALUES ($1, $2, $3, $4, $5, now(), 0) RETURNING *', [title, text, imageurl, tags, userId]);
     
     res.json(post.rows);
@@ -114,9 +123,7 @@ export const setComment = async (req, res) => {
   const{ id } = req.params;
   const userId = req.userId;
   const { content } = req.body;
-  console.log(id);
-  console.log(userId);
-  console.log(content);
+
   try {
     const query = 'INSERT INTO comments (postid, userid, content) VALUES ($1, $2, $3) RETURNING *';
     const values = [id, userId, content];
@@ -130,17 +137,39 @@ export const setComment = async (req, res) => {
 };
 
 export const getComments = async (req, res) => {
-  const{ id } = req.params;
+  const { id } = req.params;
   const userId = req.userId;
   const { content } = req.body;
+  
   try {
-    console.log(req.body);
-    const result = await pool.query('SELECT comments.id, comments.content,  users.surname, comments.timestamp, users.name, users.avatarurl FROM comments JOIN users ON comments.userid = users.id WHERE postid = $1', [id]);
+
+    
+    let result;
+    
+    // Если `id` равен 'all', выбираем все комментарии, иначе фильтруем по конкретному посту
+    if (id === 'all') {
+      result = await pool.query(
+        `SELECT comments.id, comments.content, users.surname, comments.timestamp, users.name, users.avatarurl 
+       FROM comments 
+       JOIN users ON comments.userid = users.id`
+      );
+    } else {
+      result = await pool.query(
+        `SELECT comments.id, comments.content, users.surname, comments.timestamp, users.name, users.avatarurl 
+       FROM comments 
+       JOIN users ON comments.userid = users.id 
+       WHERE postid = $1`, 
+        [id]
+      );
+    }
+    
+    // Отправляем результат запроса в формате JSON
     res.status(200).json(result.rows);
-    console.log(result.rows);
+    
   } catch (error) {
-    console.error('Error creating comment:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    // Обработка ошибок
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ message: 'Ошибка при получении комментариев' });
   }
 };
 // export const patchComment = async (req, res) => {

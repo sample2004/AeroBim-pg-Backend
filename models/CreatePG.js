@@ -1,5 +1,5 @@
 
-import log from 'node-gyp/lib/log.js';
+
 import { pool } from '../config/db.js';
 export async function createUsersTable() {
     try {
@@ -38,6 +38,7 @@ export async function createPostsTable() {
             viewed_users VARCHAR[],
             imageurl VARCHAR(255),
             userid UUID,
+            commentscount INT DEFAULT 0,
             timestamp TIMESTAMP DEFAULT now(),
             FOREIGN KEY (userid) REFERENCES users (Id)
         );
@@ -98,12 +99,67 @@ export async function createFamityTaskTable() {
         console.error('tasks table creation failed');
     }
 };
+export async function createNotifyFunction() {
+    try {
+        const query = `
+CREATE OR REPLACE FUNCTION public.notify_db_event()
+RETURNS trigger
+LANGUAGE plpgsql
+COST 100
+VOLATILE NOT LEAKPROOF
+AS $$
+DECLARE
+  payload JSON;
+  row_id TEXT; -- Используем TEXT для хранения обоих типов
+BEGIN
+  -- Определяем тип данных id и преобразуем его в текст
+  CASE 
+    WHEN pg_typeof(NEW.id) = 'bigint'::regtype THEN
+      row_id := NEW.id::TEXT;
+    WHEN pg_typeof(NEW.id) = 'uuid'::regtype THEN
+      row_id := NEW.id::TEXT;
+    ELSE
+      -- Обработка случая, если id имеет другой тип данных
+      RAISE EXCEPTION 'Unsupported id type: %', pg_typeof(NEW.id);
+  END CASE;
+
+  -- Если операция DELETE, используем OLD.id
+  IF TG_OP = 'DELETE' THEN
+    CASE 
+      WHEN pg_typeof(OLD.id) = 'bigint'::regtype THEN
+        row_id := OLD.id::TEXT;
+      WHEN pg_typeof(OLD.id) = 'uuid'::regtype THEN
+        row_id := OLD.id::TEXT;
+      ELSE
+        RAISE EXCEPTION 'Unsupported id type: %', pg_typeof(OLD.id);
+    END CASE;
+  END IF;
+
+  payload := json_build_object('table', TG_TABLE_NAME, 'action', TG_OP, 'id', row_id);
+
+  PERFORM pg_notify('db_event', payload::text);
+
+  RETURN NEW; -- Или OLD/NULL в зависимости от типа триггера
+END;
+$$;
+
+ALTER FUNCTION public.notify_db_event() OWNER TO postgres;
+            `;
+        
+        await pool.query(query);
+        console.log('Nottify function created');
+    } catch (err) {
+        console.error(err);
+        console.error('tasks table creation failed');
+    }
+};
 export async function initTables() {
     try {
         await createUsersTable();
         await createPostsTable();
         await createCommentsTable();
         await createFamityTaskTable();
+        await createNotifyFunction();
         console.log('All tables created successfully');
     } catch (err) {
         console.error(err);
